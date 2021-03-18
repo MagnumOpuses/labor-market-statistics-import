@@ -1,4 +1,4 @@
-//:TODO put thi in database and a endpoint for the link list page
+//:TODO put this in database and a endpoint for the link list page
 const csv = require('csv-parser');
 const fs = require('fs');
 function writeToJSONFile(codes) {

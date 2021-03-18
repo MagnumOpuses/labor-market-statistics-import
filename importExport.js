@@ -3,7 +3,8 @@
  * We import all data every time a update occure
  *  - is there data newer than in mongodb?
  *    - if true 
- *          remove collection and do a compleate import 
+ *          do a compleate import to <default-collection-name>-<dateTime>.
+ *          remove collection <default-collection-name>  and copy <default-collection>-<dateTime> to new default-collection-name
  *      else do nothing
  *
  * From three table ARBETSKRAFT, PLATSER och SOKANDE in Relational DB (Oracle) to Document DB (MongoDB)
