@@ -15,8 +15,8 @@ dumpConfig = () =>{
     return configText+JSON.stringify(config, null, 2);
 };
 
+
 module.exports = {
     config,
     dumpConfig
-    //uri: 'mongodb://statuser:kalle123@mongodb:27017/statistik'
 };

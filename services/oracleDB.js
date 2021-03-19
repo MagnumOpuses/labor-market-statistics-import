@@ -16,6 +16,14 @@ const close = async () => {
     await oracledb.getPool().close();
 };
 
+const getMonadFromDB = async (sql) => {
+    let bind = {};
+    console.log('Fetch all months...');
+    let dbResult = await oracledb.executeSQLStatement(sql, bind);
+    console.log(dbResult.rows);
+    return JSON.parse(JSON.stringify(dbResult.rows));
+};
+
 const executeSQLStatement = (statement, binds = [], opts = {})  => {
     //executeMany(), http://oracle.github.io/node-oracledb/doc/api.html#executeoptions
     return new Promise(async (resolve, reject) => {
@@ -40,5 +48,5 @@ const executeSQLStatement = (statement, binds = [], opts = {})  => {
     });
 };
 module.exports = {
-    startup, executeSQLStatement, close
+    startup, executeSQLStatement, getMonadFromDB, close
 }

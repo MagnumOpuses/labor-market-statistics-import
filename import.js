@@ -9,48 +9,9 @@
  *
  * From three table ARBETSKRAFT, PLATSER och SOKANDE in Relational DB (Oracle) to Document DB (MongoDB)
  */
-const { MongoClient } = require('mongodb');
+
 const oracledb = require('./services/oracleDB');
-const MongoConfig = require('./config/mongodb');
-
-const uri = "mongodb://statuser:kalle123@localhost:27017/kalle"; //TODO: Move this to .env
-
-
-const TableEnum = Object.freeze({sokande:1, arbetskraft:2,  platser:3});
-
-
-/*
-@param TableEnum value
- */
-const insertMongo = async (docs, collection) => {
-    let client;
-    try {
-        client = new MongoClient(MongoConfig.config.default_uri,{ useUnifiedTopology: true } );
-        await client.connect(); //MongoClient.connect(url, options, callback)
-        const mongoDatabase = client.db(MongoConfig.config.db_name);
-        switch (collection) {
-            case TableEnum.sokande :
-                collection = mongoDatabase.collection("sokande");
-                break;
-            case TableEnum.platser :
-                collection = mongoDatabase.collection("platser");
-                break;
-            case TableEnum.arbetskraft:
-                collection = mongoDatabase.collection("arbetskraft");
-                break;
-            default:
-                throw `Collection ${collection} do not exists`
-        }
-        // this option prevents additional documents from being inserted if one fails
-        const options = { ordered: true };
-        const result = await collection.insertMany(docs, options);
-        console.log(`${result.insertedCount} documents were inserted`);
-    } finally {
-        if(client){
-            await client.close();
-        }
-    }
-};
+const mongoDB = require('./services/mongodb');
 
 const importExportSokandeData = async  (manad) => {
     let bind = { manad };
@@ -59,7 +20,7 @@ const importExportSokandeData = async  (manad) => {
         console.log("Month: "+manad+". Getting SOKANDE data....");
         let dbResult = await oracledb.executeSQLStatement(sql, bind);
         console.log("Result from relational database:"+dbResult.rows.length)
-        await insertMongo(dbResult.rows, TableEnum.sokande);
+        await mongoDB.insertMongo(dbResult.rows, mongoDB.TableEnum.sokande);
     } catch (err) {
         console.log(err);
     }
@@ -72,7 +33,7 @@ const importExportPlatserData = async (manad) => {
       console.log("Month: "+manad+". Getting PLATSER data....");
       let dbResult = await oracledb.executeSQLStatement(sql, bind);
       console.log("Result from relational database:"+dbResult.rows.length)
-      await insertMongo(dbResult.rows, TableEnum.platser);
+      await mongoDB.insertMongo(dbResult.rows, mongoDB.TableEnum.platser);
 
   }catch (e) {
       console.log(e);
@@ -85,26 +46,19 @@ const importExportArbetskraftData = async (manad) => {
         console.log("Month: "+manad+". Getting  ARBETSKRAFT data....");
         let dbResult = await oracledb.executeSQLStatement(sql, bind);
         //TODO: Insert result into MongDB (Remeber to erase collection before batch)
-        await insertMongo(dbResult.rows, TableEnum.arbetskraft);
+        await mongoDB.insertMongo(dbResult.rows, mongoDB.TableEnum.arbetskraft);
         console.log("Result from relational database:"+dbResult.rows.length)
     }catch (e) {
         console.log(e);
     }
 };
-//TODO: move this?
-const getMonadFromDB = async (sql) => {
-    let bind = {};
-    console.log('Fetch all months...');
-    let dbResult = await oracledb.executeSQLStatement(sql, bind);
-    console.log(dbResult.rows);
-    return JSON.parse(JSON.stringify(dbResult.rows));
-};
+
 
 const importExportData = async () =>{
     try{
         //We will do MANAD search for each table
         //SOKANDE
-        let data = await getMonadFromDB("select distinct MANAD from SOKANDE ORDER BY MANAD");
+        let data = await oracledb.getMonadFromDB("select distinct MANAD from SOKANDE ORDER BY MANAD");
         console.log('Fetching sokande data for each month...')
         for(let index = 0 ; index<data.length; index++) {
             console.log(`Sokandedata for manad: ${ data[index].MANAD }`);
@@ -112,13 +66,13 @@ const importExportData = async () =>{
         }
 
         //PLATSER
-        data = await getMonadFromDB("select distinct MANAD from PLATSER ORDER BY MANAD");
+        data = await oracledb.getMonadFromDB("select distinct MANAD from PLATSER ORDER BY MANAD");
         for(let index = 0 ; index<data.length; index++) {
             console.log(`Platserdata for manad: ${ data[index].MANAD }`);
             await importExportPlatserData(data[index].MANAD);
         }
         //ARBETSKRAFT
-        data = await getMonadFromDB("select distinct MANAD from ARBETSKRAFT ORDER BY MANAD")
+        data = await oracledb.getMonadFromDB("select distinct MANAD from ARBETSKRAFT ORDER BY MANAD")
         for(let index = 0 ; index<data.length; index++) {
             console.log(`Arbetskraft for manad: ${ data[index].MANAD }`);
             await importExportArbetskraftData(data[index].MANAD);
@@ -139,8 +93,10 @@ const dateTime = () =>{
 //TODO: Select MONTH distinct from DB and use it to fetch data in chunks.
 
 (async function() {
+    
+    await oracledb.startup();
     console.log(dateTime() + " Importing data starts...")
-    //await oracledb.startup();
+    await mongoDB.createIndex('arbetskraft', ['MANAD', 'LANSKOD', 'KOMMUNKOD']);
     //await importExportSokandeData('2020-04');
     //await importExportPlatserData('2020-04');
     //await importExportArbetskraftData('2020-04');
