@@ -9,62 +9,25 @@
  *
  * From three table ARBETSKRAFT, PLATSER och SOKANDE in Relational DB (Oracle) to Document DB (MongoDB)
  */
-const oracledb = require('oracledb');
 const { MongoClient } = require('mongodb');
-const uri = "mongodb://statuser:kalle123@localhost:27017/statistik"; //TODO: Move this to .env
-const client = new MongoClient(uri);
+const oracledb = require('./services/oracleDB');
+const MongoConfig = require('./config/mongodb');
+
+const uri = "mongodb://statuser:kalle123@localhost:27017/kalle"; //TODO: Move this to .env
+
 
 const TableEnum = Object.freeze({sokande:1, arbetskraft:2,  platser:3});
 
-const startup = async () => {
-    try {
-        console.log('Initializing Oracle database module');
-        //TODO: remove hard coded to be fetched environment.
-        await oracledb.createPool({
-            user: "publik_api",
-            password: "aH72G15apI",
-            connectString: "dwdb.ams.se/dw"});
-    } catch (err) {
-        console.error(err);
-        process.exit(1); // Non-zero failure code
-    }
-};
 
-
-const close = async () => {
-    await oracledb.getPool().close();
-};
-
-const executeSQLStatement = (statement, binds = [], opts = {})  => {
-    //executeMany(), http://oracle.github.io/node-oracledb/doc/api.html#executeoptions
-    return new Promise(async (resolve, reject) => {
-        let conn;
-        opts.outFormat = oracledb.OBJECT;
-        opts.autoCommit = true;
-        try {
-            conn = await oracledb.getConnection();
-            const result = await conn.execute(statement, binds, opts);
-            resolve(result);
-        } catch (err) {
-            reject(err);
-        } finally {
-            if (conn) {
-                try {
-                    await conn.close();
-                } catch (err) {
-                    console.log(err);
-                }
-            }
-        }
-    });
-};
 /*
 @param TableEnum value
  */
 const insertMongo = async (docs, collection) => {
+    let client;
     try {
+        client = new MongoClient(MongoConfig.config.default_uri,{ useUnifiedTopology: true } );
         await client.connect(); //MongoClient.connect(url, options, callback)
-        const mongoDatabase = client.db("statistik");
+        const mongoDatabase = client.db(MongoConfig.config.db_name);
         switch (collection) {
             case TableEnum.sokande :
                 collection = mongoDatabase.collection("sokande");
@@ -83,7 +46,9 @@ const insertMongo = async (docs, collection) => {
         const result = await collection.insertMany(docs, options);
         console.log(`${result.insertedCount} documents were inserted`);
     } finally {
-        await client.close();
+        if(client){
+            await client.close();
+        }
     }
 };
 
@@ -91,8 +56,9 @@ const importExportSokandeData = async  (manad) => {
     let bind = { manad };
     let sql = "select * from SOKANDE where manad=:manad";
     try{
-        let dbResult = await executeSQLStatement(sql, bind);
-        //TODO: Insert result into MongDB (Remeber to erase collection before batch)
+        console.log("Month: "+manad+". Getting SOKANDE data....");
+        let dbResult = await oracledb.executeSQLStatement(sql, bind);
+        console.log("Result from relational database:"+dbResult.rows.length)
         await insertMongo(dbResult.rows, TableEnum.sokande);
     } catch (err) {
         console.log(err);
@@ -103,8 +69,9 @@ const importExportPlatserData = async (manad) => {
   let bind = { manad };
   let sql = "select * from PLATSER where manad =:manad";
   try{
-      let dbResult = await executeSQLStatement(sql, bind);
-      //TODO: Insert result into MongDB (Remeber to erase collection before batch)
+      console.log("Month: "+manad+". Getting PLATSER data....");
+      let dbResult = await oracledb.executeSQLStatement(sql, bind);
+      console.log("Result from relational database:"+dbResult.rows.length)
       await insertMongo(dbResult.rows, TableEnum.platser);
 
   }catch (e) {
@@ -115,10 +82,11 @@ const importExportArbetskraftData = async (manad) => {
     let bind = { manad };
     let sql = "select * from ARBETSKRAFT where manad =:manad";
     try{
-        let dbResult = await executeSQLStatement(sql, bind);
+        console.log("Month: "+manad+". Getting  ARBETSKRAFT data....");
+        let dbResult = await oracledb.executeSQLStatement(sql, bind);
         //TODO: Insert result into MongDB (Remeber to erase collection before batch)
         await insertMongo(dbResult.rows, TableEnum.arbetskraft);
-
+        console.log("Result from relational database:"+dbResult.rows.length)
     }catch (e) {
         console.log(e);
     }
@@ -127,7 +95,7 @@ const importExportArbetskraftData = async (manad) => {
 const getMonadFromDB = async (sql) => {
     let bind = {};
     console.log('Fetch all months...');
-    let dbResult = await executeSQLStatement(sql, bind);
+    let dbResult = await oracledb.executeSQLStatement(sql, bind);
     console.log(dbResult.rows);
     return JSON.parse(JSON.stringify(dbResult.rows));
 };
@@ -160,6 +128,9 @@ const importExportData = async () =>{
     }
 };
 
+const dateTime = () =>{
+    return new Date().toISOString().replace(/T/,':').replace(/\..+/,'').replace(/-/g,'');
+}
 
 
 //TODO: Find out all MANAD that exists in the DB "select distinct MANAD from SOKANDE ORDER BY MANAD;"
@@ -168,10 +139,32 @@ const importExportData = async () =>{
 //TODO: Select MONTH distinct from DB and use it to fetch data in chunks.
 
 (async function() {
-    await startup();
-    //await importExportSokandeData();
+    console.log(dateTime() + " Importing data starts...")
+    //await oracledb.startup();
+    //await importExportSokandeData('2020-04');
     //await importExportPlatserData('2020-04');
     //await importExportArbetskraftData('2020-04');
-    await importExportData();
+    //await importExportData();
     //TODO: cretate indexes
+    //process.exit(0);
+    console.log(dateTime()+" Importing data done.")
 })();
+
+/**
+ * //Change name on collection...
+ * try{
+*       const uri = "mongodb://statuser:kalle123@localhost:27017/statistik"; //TODO: Move this to .env
+        const client = new MongoClient(uri,{ useUnifiedTopology: true });
+        await client.connect(); 
+        let mongoDatabase = client.db('statistik');
+        collection = mongoDatabase.collection("test1");
+        await collection.insertOne({test:"ettTest"});
+        //Should be copy or clone...
+        await mongoDatabase.collection("t2").rename("t3",{dropTarget:true});
+       
+    }catch (err) {
+        console.log(err);
+    }finally(){
+         client.close()
+    }
+ */
