@@ -1,7 +1,7 @@
 const oracledb = require('oracledb');
 const OracleConfig = require('../config/oracledb');
 
-const startup = async () => {
+const init = async () => {
     try {
         console.log('Initializing Oracle database module');
         await oracledb.createPool(OracleConfig.dbPool);
@@ -19,7 +19,7 @@ const close = async () => {
 const getMonadFromDB = async (sql) => {
     let bind = {};
     console.log('Fetch all months...');
-    let dbResult = await oracledb.executeSQLStatement(sql, bind);
+    let dbResult = await executeSQLStatement(sql, bind);
     console.log(dbResult.rows);
     return JSON.parse(JSON.stringify(dbResult.rows));
 };
@@ -48,5 +48,5 @@ const executeSQLStatement = (statement, binds = [], opts = {})  => {
     });
 };
 module.exports = {
-    startup, executeSQLStatement, getMonadFromDB, close
+    init, executeSQLStatement, getMonadFromDB, close
 }

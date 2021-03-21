@@ -1,34 +1,26 @@
 const MongoConfig = require('../config/mongodb');
 const { MongoClient } = require('mongodb');
 
-const TableEnum = Object.freeze({sokande:1, arbetskraft:2,  platser:3});
+const TableEnum = Object.freeze({SOKANDE:'sokande', ARBETSKRAFT:'arbetskraft',  PLATSER:'platser'});
 
+const showConfig = () =>{
+    console.log(MongoConfig.dumpConfig());
+}
 /*
 @param TableEnum value
  */
-const insertMongo = async (docs, collection) => {
+const insertMongo = async (docs, collectionEnum) => {
     let client;
+    
     try {
         client = new MongoClient(MongoConfig.config.default_uri,{ useUnifiedTopology: true } );
         await client.connect(); //MongoClient.connect(url, options, callback)
         const mongoDatabase = client.db(MongoConfig.config.db_name);
-        switch (collection) {
-            case TableEnum.sokande :
-                collection = mongoDatabase.collection("sokande");
-                break;
-            case TableEnum.platser :
-                collection = mongoDatabase.collection("platser");
-                break;
-            case TableEnum.arbetskraft:
-                collection = mongoDatabase.collection("arbetskraft");
-                break;
-            default:
-                throw `Collection ${collection} do not exists`
-        }
+        let collection = mongoDatabase.collection(TableEnum[collectionEnum]);
         // this option prevents additional documents from being inserted if one fails
         const options = { ordered: true };
         const result = await collection.insertMany(docs, options);
-        console.log(`${result.insertedCount} documents were inserted`);
+        console.log(`${result.insertedCount} documents were inserted into `+collectionEnum);
     } finally {
         if(client){
             await client.close();
@@ -36,23 +28,6 @@ const insertMongo = async (docs, collection) => {
     }
 };
 
-const createWildIndex = async (collectionName) =>{
-    let client;
-    try{
-        client = new MongoClient(MongoConfig.config.default_uri,{ useUnifiedTopology: true } );
-        await client.connect();
-        const mongoDatabase = client.db(MongoConfig.config.db_name);
-        collection = mongoDatabase.collection(collectionName);
-        await collection.createIndexes([
-            {key: { '$**': 1 }}
-        ])
-    }catch(err){
-        console.log(err);
-    }finally{
-        await client.close();
-    }
-
-};
 /**
  * Creat indexes on a specified collection.
  * It is possible to make this to create indexes in a batch by
@@ -95,7 +70,19 @@ const createIndex = async (collectionName, keysToIndex) => {
     }
 };
 
+const create_Indexes_for_all_collections = async () => {
+    try{
+        //for(const [key, value] of Object.entries(mongoDB.TableEnum)){
+        for(const collectionEnum in TableEnum){
+            await createIndex(TableEnum[collectionEnum], ['MANAD', 'LANSKOD', 'KOMMUNKOD', 'AFKOD', 'KOEN', 'UNG_VUXEN', 'UTRIKESFODD', 'ANTAL']);
+        }
+
+    }catch (err) {
+        console.log(err);
+    }
+
+}
 
 module.exports = {
-    insertMongo, createIndex
+    insertMongo, createIndex, showConfig, create_Indexes_for_all_collections, TableEnum
 }

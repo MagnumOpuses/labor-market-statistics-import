@@ -13,7 +13,9 @@ dbPool =  {
 
 dumpConfig = () =>{
     const configText = "Oracle Database Configuration:\n";
-    return configText+JSON.stringify(dbPool, null, 2);
+    copy = Object.assign({}, dbPool);
+    copy.password = 'xxxxxxxxx';
+    return configText+JSON.stringify(copy, null, 2);
 };
 
 

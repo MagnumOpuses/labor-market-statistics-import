@@ -13,69 +13,28 @@
 const oracledb = require('./services/oracleDB');
 const mongoDB = require('./services/mongodb');
 
-const importExportSokandeData = async  (manad) => {
+const importExportData = async  (collectionEnum, manad) => {
     let bind = { manad };
-    let sql = "select * from SOKANDE where manad=:manad";
+    let sql = "select * from "+collectionEnum+" where manad=:manad";
+    console.log(sql);//TODO: Temp remove!
     try{
         console.log("Month: "+manad+". Getting SOKANDE data....");
         let dbResult = await oracledb.executeSQLStatement(sql, bind);
         console.log("Result from relational database:"+dbResult.rows.length)
-        await mongoDB.insertMongo(dbResult.rows, mongoDB.TableEnum.sokande);
+        await mongoDB.insertMongo(dbResult.rows, collectionEnum);
     } catch (err) {
         console.log(err);
     }
 };
 
-const importExportPlatserData = async (manad) => {
-  let bind = { manad };
-  let sql = "select * from PLATSER where manad =:manad";
-  try{
-      console.log("Month: "+manad+". Getting PLATSER data....");
-      let dbResult = await oracledb.executeSQLStatement(sql, bind);
-      console.log("Result from relational database:"+dbResult.rows.length)
-      await mongoDB.insertMongo(dbResult.rows, mongoDB.TableEnum.platser);
-
-  }catch (e) {
-      console.log(e);
-  }
-};
-const importExportArbetskraftData = async (manad) => {
-    let bind = { manad };
-    let sql = "select * from ARBETSKRAFT where manad =:manad";
-    try{
-        console.log("Month: "+manad+". Getting  ARBETSKRAFT data....");
-        let dbResult = await oracledb.executeSQLStatement(sql, bind);
-        //TODO: Insert result into MongDB (Remeber to erase collection before batch)
-        await mongoDB.insertMongo(dbResult.rows, mongoDB.TableEnum.arbetskraft);
-        console.log("Result from relational database:"+dbResult.rows.length)
-    }catch (e) {
-        console.log(e);
-    }
-};
-
-
-const importExportData = async () =>{
+const import_all_monthData_for_a_Collection = async (collectionEnum) =>{
     try{
         //We will do MANAD search for each table
-        //SOKANDE
-        let data = await oracledb.getMonadFromDB("select distinct MANAD from SOKANDE ORDER BY MANAD");
+        let data = await oracledb.getMonadFromDB("select distinct MANAD from "+collectionEnum+" ORDER BY MANAD");
         console.log('Fetching sokande data for each month...')
         for(let index = 0 ; index<data.length; index++) {
             console.log(`Sokandedata for manad: ${ data[index].MANAD }`);
-            await importExportSokandeData(data[index].MANAD);
-        }
-
-        //PLATSER
-        data = await oracledb.getMonadFromDB("select distinct MANAD from PLATSER ORDER BY MANAD");
-        for(let index = 0 ; index<data.length; index++) {
-            console.log(`Platserdata for manad: ${ data[index].MANAD }`);
-            await importExportPlatserData(data[index].MANAD);
-        }
-        //ARBETSKRAFT
-        data = await oracledb.getMonadFromDB("select distinct MANAD from ARBETSKRAFT ORDER BY MANAD")
-        for(let index = 0 ; index<data.length; index++) {
-            console.log(`Arbetskraft for manad: ${ data[index].MANAD }`);
-            await importExportArbetskraftData(data[index].MANAD);
+            await importExportData(collectionEnum, data[index].MANAD);
         }
     } catch (err) {
         console.log(err);
@@ -86,24 +45,39 @@ const dateTime = () =>{
     return new Date().toISOString().replace(/T/,':').replace(/\..+/,'').replace(/-/g,'');
 }
 
+const import_All_MonthData_for_all_collections= async () => {
+    try{
+        //for(const [key, value] of Object.entries(mongoDB.TableEnum)){
+        for(const collectionEnum in mongoDB.TableEnum){
+            console.log(collectionEnum);
+            await import_all_monthData_for_a_Collection(collectionEnum);
+        }
 
-//TODO: Find out all MANAD that exists in the DB "select distinct MANAD from SOKANDE ORDER BY MANAD;"
+    }catch (err) {
+        console.log(err);
+    }
+
+}
 //TODO: Compare OracleDB MANAD with MANAD in docDB (fetch or not fetch?)
 //TODO: It is possibleIs to fill upp one collection and rename it to 'prod' collection (shorten the offline time)
-//TODO: Select MONTH distinct from DB and use it to fetch data in chunks.
 
 (async function() {
     
-    await oracledb.startup();
+    await oracledb.init();
+    mongoDB.showConfig();
     console.log(dateTime() + " Importing data starts...")
-    await mongoDB.createIndex('arbetskraft', ['MANAD', 'LANSKOD', 'KOMMUNKOD']);
-    //await importExportSokandeData('2020-04');
+    await import_All_MonthData_for_all_collections();
+    await mongoDB.create_Indexes_for_all_collections();
+    //await mongoDB.createIndex('arbetskraft', ['MANAD', 'LANSKOD', 'KOMMUNKOD', 'AFKOD']);
+    //await importExportData(mongoDB.TableEnum.SOKANDE, '2020-04');
+    //await importExportData(mongoDB.TableEnum.PLATSER, '2020-04');
+    //await importExportData(mongoDB.TableEnum.ARBETSKRAFT, '2020-04');
     //await importExportPlatserData('2020-04');
     //await importExportArbetskraftData('2020-04');
     //await importExportData();
     //TODO: cretate indexes
     //process.exit(0);
-    console.log(dateTime()+" Importing data done.")
+    console.log(dateTime()+" Importing data done.");
 })();
 
 /**

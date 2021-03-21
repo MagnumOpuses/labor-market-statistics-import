@@ -12,7 +12,9 @@ const config=
 
 dumpConfig = () =>{
     const configText = "Mongo Configuration:\n";
-    return configText+JSON.stringify(config, null, 2);
+    copy = Object.assign({}, config);
+    copy.password = 'xxxxxxxxx';
+    return configText+JSON.stringify(copy, null, 2);
 };
 
 
