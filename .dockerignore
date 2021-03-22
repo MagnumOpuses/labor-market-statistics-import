@@ -1,0 +1,6 @@
+.env*
+tests/
+stack.yml
+.idea/
+/node_modules
+Dockerfile

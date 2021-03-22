@@ -18,7 +18,7 @@ const insertMongo = async (docs, collectionEnum) => {
         await client.connect(); //MongoClient.connect(url, options, callback)
         const mongoDatabase = client.db(MongoConfig.config.db_name);
         console.log(collectionEnum);
-        let collection = mongoDatabase.collection(collectionEnum);
+        let collection = mongoDatabase.collection(TableEnum[collectionEnum]);
         // this option prevents additional documents from being inserted if one fails
         const options = { ordered: true };
         const result = await collection.insertMany(docs, options);
@@ -44,7 +44,7 @@ const createIndex = async (collectionName, keysToIndex) => {
         client = new MongoClient(MongoConfig.config.default_uri,{ useUnifiedTopology: true } );
         await client.connect();
         const mongoDatabase = client.db(MongoConfig.config.db_name);
-        collection = mongoDatabase.collection(TableEnum[collectionName]);
+        collection = mongoDatabase.collection(collectionName);
 
         for (const key in keysToIndex){
             //Check if field exists in spec. collection

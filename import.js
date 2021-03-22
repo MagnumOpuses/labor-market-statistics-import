@@ -11,7 +11,7 @@
  */
 
 const oracledb = require('./services/oracleDB');
-const mongoDB = require('./services/mongodb');
+const mongoDB = require('./services/mongoDB');
 
 const importExportData = async  (collectionEnum, manad) => {
     let bind = { manad };
@@ -65,8 +65,8 @@ const import_All_MonthData_for_all_collections= async () => {
     await oracledb.init();
     mongoDB.showConfig();
     console.log(dateTime() + " Importing data starts...")
-    await mongoDB.removeAllCollections();
-    await import_All_MonthData_for_all_collections();
+    //await mongoDB.removeAllCollections();
+    //await import_All_MonthData_for_all_collections();
     await mongoDB.create_Indexes_for_all_collections();
     //await mongoDB.createIndex('arbetskraft', ['MANAD', 'LANSKOD', 'KOMMUNKOD', 'AFKOD']);
     //await importExportData(mongoDB.TableEnum.SOKANDE, '2020-04');
