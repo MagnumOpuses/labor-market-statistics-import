@@ -16,9 +16,8 @@ const mongoDB = require('./services/mongodb');
 const importExportData = async  (collectionEnum, manad) => {
     let bind = { manad };
     let sql = "select * from "+collectionEnum+" where manad=:manad";
-    console.log(sql);//TODO: Temp remove!
     try{
-        console.log("Month: "+manad+". Getting SOKANDE data....");
+        console.log("Month: "+manad+". Getting "+collectionEnum+" data....");
         let dbResult = await oracledb.executeSQLStatement(sql, bind);
         console.log("Result from relational database:"+dbResult.rows.length)
         await mongoDB.insertMongo(dbResult.rows, collectionEnum);
@@ -40,7 +39,7 @@ const import_all_monthData_for_a_Collection = async (collectionEnum) =>{
         console.log(err);
     }
 };
-
+//TODO: Move this 
 const dateTime = () =>{
     return new Date().toISOString().replace(/T/,':').replace(/\..+/,'').replace(/-/g,'');
 }
@@ -66,6 +65,7 @@ const import_All_MonthData_for_all_collections= async () => {
     await oracledb.init();
     mongoDB.showConfig();
     console.log(dateTime() + " Importing data starts...")
+    await mongoDB.removeAllCollections();
     await import_All_MonthData_for_all_collections();
     await mongoDB.create_Indexes_for_all_collections();
     //await mongoDB.createIndex('arbetskraft', ['MANAD', 'LANSKOD', 'KOMMUNKOD', 'AFKOD']);
@@ -74,10 +74,8 @@ const import_All_MonthData_for_all_collections= async () => {
     //await importExportData(mongoDB.TableEnum.ARBETSKRAFT, '2020-04');
     //await importExportPlatserData('2020-04');
     //await importExportArbetskraftData('2020-04');
-    //await importExportData();
-    //TODO: cretate indexes
-    //process.exit(0);
     console.log(dateTime()+" Importing data done.");
+    process.exit(0);
 })();
 
 /**
