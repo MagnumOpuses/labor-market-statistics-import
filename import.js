@@ -3,8 +3,9 @@
  * We import all data every time a update occure
  *  - is there data newer than in mongodb?
  *    - if true 
- *          do a compleate import to <default-collection-name>-<dateTime>.
+ *          alt.1 do a compleate import to <default-collection-name>-<dateTime>.
  *          remove collection <default-collection-name>  and copy <default-collection>-<dateTime> to new default-collection-name
+ *          alt.2 import the new data...
  *      else do nothing
  *
  * From three table ARBETSKRAFT, PLATSER och SOKANDE in Relational DB (Oracle) to Document DB (MongoDB)
@@ -58,6 +59,11 @@ const import_All_MonthData_for_all_collections= async () => {
 
 }
 //TODO: Compare OracleDB MANAD with MANAD in docDB (fetch or not fetch?)
+const importNewMonth = () =>{
+    //string to date
+    //Get last month from mongodb
+    //Check with OracleDB if there is a new year-month to import
+}
 //TODO: It is possibleIs to fill upp one collection and rename it to 'prod' collection (shorten the offline time)
 
 (async function() {
@@ -65,8 +71,8 @@ const import_All_MonthData_for_all_collections= async () => {
     await oracledb.init();
     mongoDB.showConfig();
     console.log(dateTime() + " Importing data starts...")
-    //await mongoDB.removeAllCollections();
-    //await import_All_MonthData_for_all_collections();
+    await mongoDB.removeAllCollections();
+    await import_All_MonthData_for_all_collections();
     await mongoDB.create_Indexes_for_all_collections();
     //await mongoDB.createIndex('arbetskraft', ['MANAD', 'LANSKOD', 'KOMMUNKOD', 'AFKOD']);
     //await importExportData(mongoDB.TableEnum.SOKANDE, '2020-04');
