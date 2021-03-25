@@ -16,6 +16,7 @@
     "express": "^4.17.1",
     "mongodb": "^3.6.5",
     "morgan": "^1.10.0",
-    "oracledb": "^5.0.0"
+    "oracledb": "^5.0.0",
+    "winston": "^3.3.3"
   }
 }

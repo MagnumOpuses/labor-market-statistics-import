@@ -1,13 +1,16 @@
 const oracledb = require('oracledb');
 const OracleConfig = require('../config/oracledb');
+const {LoggerModule} = require('../services/logging');
+
+const logger = LoggerModule.getLogger();
 
 const init = async () => {
     try {
-        console.log('Initializing Oracle database module');
+        logger.log('info','Initializing Oracle database module');
         await oracledb.createPool(OracleConfig.dbPool);
-        console.log(OracleConfig.dumpConfig())
+        logger.log('info', OracleConfig.dumpConfig())
     } catch (err) {
-        console.error(err);
+        logger.log('error', err);
         process.exit(1); // Non-zero failure code
     }
 };
@@ -16,15 +19,24 @@ const close = async () => {
     await oracledb.getPool().close();
 };
 
-const getMonadFromDB = async (sql) => {
+const getMonadFromDB = async (collectionEnum) => {
     let bind = {};
-    console.log('Fetch all months...');
+    const sql = "select distinct MANAD from "+collectionEnum+" ORDER BY MANAD";
+    logger.log('info', 'Fetch all months for table: '+collectionEnum);
     let dbResult = await executeSQLStatement(sql, bind);
-    console.log(dbResult.rows);
+    logger.log('info',`Rows from oracle database: ${JSON.stringify(dbResult.rows)}`);
     return JSON.parse(JSON.stringify(dbResult.rows));
 };
 
-const executeSQLStatement = (statement, binds = [], opts = {})  => {
+const getAllRecordsForAMonth = async (collectionEnum, manad) => {
+    let bind = { manad };
+    let sql = "select * from "+collectionEnum+" where manad=:manad";
+    let dbResult = await executeSQLStatement(sql, bind);
+    return dbResult;
+}
+
+
+const executeSQLStatement = async (statement, binds = [], opts = {})  => {
     //executeMany(), http://oracle.github.io/node-oracledb/doc/api.html#executeoptions
     return new Promise(async (resolve, reject) => {
         let conn;
@@ -41,12 +53,13 @@ const executeSQLStatement = (statement, binds = [], opts = {})  => {
                 try {
                     await conn.close();
                 } catch (err) {
-                    console.log(err);
+                    logger.log('error', err);
+                    throw err;
                 }
             }
         }
     });
 };
 module.exports = {
-    init, executeSQLStatement, getMonadFromDB, close
+    init, executeSQLStatement, getMonadFromDB, close, getAllRecordsForAMonth
 }
