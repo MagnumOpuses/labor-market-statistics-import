@@ -9,4 +9,8 @@ Import data in two diffrent ways
 Start (1) first time run, there after when needed.
 Start (2) every night during work week.    
 
+Robustness
+----------
+- import to new collection <name-import> and rename it to production collection name, after origin is renamed to <name-date>
+
 ---
