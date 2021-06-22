@@ -23,4 +23,4 @@ COPY . .
 
 # It should be possible to run diffrent entries to the app from OpenShift
 # this apporach is temporary...
-CMD [ "node", "import.js" ]
+CMD [ "node", "importAll.js" ]
